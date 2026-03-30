@@ -1,0 +1,5 @@
+TRANSFERSET_NAME = "COMS-1"
+TRANSFERSET_PATH = "../../data/vksdr/COMS-1_LRIT_multiple-images.hdf5"
+TRANSFERSET_SUBSET_PATH = "coms-1_subset.h5"
+TRANSFERSET_LABEL = [3]
+TEST_SIZE = 30

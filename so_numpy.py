@@ -100,7 +100,6 @@ def SCD(s: np.ndarray, N: int=512, L: int=0, pad: bool=True, algorithm: int=0) -
         o.append((x - np.amin(x)) / (np.amax(x) - np.amin(x)))
     return np.asarray(o)
 
-
 def ccsd(s: np.ndarray, ws: int=512, step: int=256, sigma: float=0.3) -> np.ndarray:
     '''
     I follow the steps listed in this paper:

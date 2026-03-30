@@ -63,7 +63,6 @@ def element_HOS(s):
           72*M42*M20**2 + 96*M41*M20*M21
     return normalize(C20,C21,C40,C41,C42,C60,C61,C62,C63,C80,C82,C84,M101,M103)
 
-
 class RD_CTCF:
     def __init__(self, window_size, step, res=2, fs_fc=False):
         self.window_size = window_size

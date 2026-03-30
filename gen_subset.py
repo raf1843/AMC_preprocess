@@ -5,8 +5,10 @@ import h5py
 mod = [i for i in range(0, 24) if i not in [17,18,19,20,21]]  # all digital mods.
 snr = range(26)
 
-hf = h5py.File('path/to/the/GOLD_XYZ_OSC.0001_1024.hdf5', 'r+')
+hf = h5py.File('../../data/GOLD_XYZ_OSC.0001_1024.hdf5', 'r+')
 x = hf['X'] # thanks to user 1309760002@qq.com
+print("Initial shape:", x.shape)
+
 p = int(len(x) / 24)
 pp = int(p / 26)
 pts = 300
