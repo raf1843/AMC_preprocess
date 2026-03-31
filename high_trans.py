@@ -1,5 +1,5 @@
 import numpy as np
-import h5py, sys, argparse
+import h5py, sys, os
 import matplotlib.pyplot as plt
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 from sklearn.linear_model import LogisticRegression as LRG
@@ -7,21 +7,11 @@ from sklearn.linear_model import SGDClassifier as SGD
 from sklearn.metrics import confusion_matrix
 import seaborn as sn
 import pandas as pd
-import os
 import config
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--classifier', type=str, default='LDA')
-parser.add_argument('--cuda', action='store_true')
-# could try playing with these
-parser.add_argument('--window_size', type=int, default=64)
-parser.add_argument('--step', type=int, default=16)
-args = parser.parse_args()
-classifier_ = args.classifier
-window_size = args.window_size
-step = args.step
+classifier_ = config.CLASSIFIER
 
-if args.cuda:
+if config.CUDA:
     import ho_cupy as ho
 else:
     import ho_numpy as ho
@@ -45,15 +35,7 @@ pts = 300
 tr = int(pts // 10) * 9
 te = pts - tr
 
-hf = h5py.File(config.TRANSFERSET_SUBSET_PATH, 'r+')
-x_trans_test = hf['test'][:, :]
-hf.close()
-
 save_dir = f"{config.TRANSFERSET_NAME}-{classifier_}"
-os.makedirs(f"../{save_dir}", exist_ok=True)
-
-with open(f"../{save_dir}/logbook_high_trans.txt", "w") as out:
-    out.write("Start \n")
 
 ###############################################################
 ############################# train and test functions
@@ -103,7 +85,7 @@ def run(snr, trans):
             s = x_train[base,:,:]
             obj = getattr(ho, trans)
             if isinstance(obj, type):
-                obj = obj(window_size, step)
+                obj = obj()
             s = obj(s)
             s = s.reshape((tr, -1))
             train.append(s)
@@ -111,7 +93,7 @@ def run(snr, trans):
             s = x_test[base,:,:]
             obj = getattr(ho, trans)
             if isinstance(obj, type):
-                obj = obj(window_size, step)
+                obj = obj()
             s = obj(s)
             s = s.reshape((te, -1))
             test.append(s)
@@ -128,14 +110,14 @@ def run(snr, trans):
     print (train.shape, test.shape)
     return train, test
 
-def testrun(trans):
+# trans is the transform to run, 's' is the dataset to test
+def testrun(trans, s):
     test = []
-    s = x_trans_test
     obj = getattr(ho, trans)
     if isinstance(obj, type):
-        obj = obj(window_size, step)
+        obj = obj()
     s = obj(s)
-    s = s.reshape((30, -1))
+    s = s.reshape((config.TEST_SIZE, -1))
     test.append(s)
     test = np.asarray(test)
 
@@ -148,7 +130,7 @@ def testrun(trans):
 def train_test(T, snr_range="high"):
     os.makedirs(f"../{save_dir}/{T}", exist_ok=True)
 
-    if snr_range not in ["high", "med", "low"]:
+    if snr_range not in ["high", "med", "low", "all"]:
         snr_range = "high"
 
     match snr_range:
@@ -158,6 +140,9 @@ def train_test(T, snr_range="high"):
             snr = range(8,16)
         case "low":
             snr = range(0,8)
+        case "all":
+            # not sure if negative SNRs are included in subset
+            snr = range(0,26)
 
     x_tr, x_te = run(snr, T)
     yy_tr = create_label(tr * len(snr))
@@ -179,8 +164,12 @@ def train_test(T, snr_range="high"):
     df_cm.to_csv(f"{save_path}.csv", index=True)
 
     # Transfer test
-    x_trans_te = testrun(T)
-    yy_trans_te = create_label(te, config.TRANSFERSET_LABEL)
+    hf = h5py.File(config.TRANSFERSET_SUBSET_PATH, 'r+')
+    x_trans_test = hf['test'][:, :]
+    hf.close()
+
+    x_trans_te = testrun(T, x_trans_test)
+    yy_trans_te = create_label(config.TEST_SIZE, config.TRANSFERSET_LABEL)
 
     sys_out(f'start transfer test {snr_range} snr , transform is {T}')
     sc, cm = classifier(x_tr, yy_tr, x_trans_te, yy_trans_te)
@@ -202,10 +191,19 @@ def train_test(T, snr_range="high"):
 ###############################################################
 ############################# main function
 ###############################################################
-for tt in trans_list:
-    sys_out("start {} train and test".format(tt))
-    train_test(tt)
-    train_test(tt, "med")
-    train_test(tt, "low")
+def main():
+    os.makedirs(f"../{save_dir}", exist_ok=True)
 
-sys_out('DONE')
+    with open(f"../{save_dir}/logbook_high_trans.txt", 'a') as out:
+        out.write("Start \n")
+
+    for tt in trans_list:
+        sys_out("start {} train and test".format(tt))
+        train_test(tt, "all")
+        #train_test(tt, "med")
+        #train_test(tt, "low")
+
+    sys_out('DONE')
+
+if __name__ == '__main__':
+    main()

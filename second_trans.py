@@ -1,5 +1,5 @@
 import numpy as np
-import h5py, sys, argparse
+import h5py, sys, os
 import matplotlib.pyplot as plt
 from skimage.measure import block_reduce
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
@@ -8,16 +8,11 @@ from sklearn.linear_model import SGDClassifier as SGD
 from sklearn.metrics import confusion_matrix
 import seaborn as sn
 import pandas as pd
-import os
 import config
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--classifier', type=str, default='LDA')
-parser.add_argument('--cuda', action='store_true')
-args = parser.parse_args()
-classifier_ = args.classifier
+classifier_ = config.CLASSIFIER
 
-if args.cuda:
+if config.CUDA:
     import so_cupy as so
 else:
     import so_numpy as so
@@ -39,16 +34,9 @@ hf.close()
 pts = 300
 tr = int(pts // 10) * 9
 te = pts - tr
-
-hf = h5py.File(config.TRANSFERSET_SUBSET_PATH, 'r+')
-x_trans_test = hf['test'][:, :]
-hf.close()
-
+    
 save_dir = f"{config.TRANSFERSET_NAME}-{classifier_}"
-os.makedirs(f"../{save_dir}", exist_ok=True)
 
-with open(f"../{save_dir}/logbook_second_trans.txt", "w") as out:
-    out.write("Start \n")   
 
 ###############################################################
 ############################# train and test functions
@@ -124,14 +112,13 @@ def run(snr, trans, profile):
     return train, test
 
 
-def testrun(trans, profile):
+def testrun(trans, s, profile):
     test = []
-    s = x_trans_test
     s = getattr(so, trans)(s=s)
     if profile:
-        s = block_reduce(s, block_size=(1, 1, 64), func=np.max).reshape((30, -1))
+        s = block_reduce(s, block_size=(1, 1, 64), func=np.max).reshape((config.TEST_SIZE, -1))
     else:
-        s = s.reshape((30, -1))
+        s = s.reshape((config.TEST_SIZE, -1))
     test.append(s)
     test = np.asarray(test)
 
@@ -176,7 +163,11 @@ def train_test(T, profile, snr_range="high"):
     df_cm.to_csv(f"{save_path}.csv", index=True)
 
     # Transfer test
-    x_trans_te = testrun(T, profile)
+    hf = h5py.File(config.TRANSFERSET_SUBSET_PATH, 'r+')
+    x_trans_test = hf['test'][:, :]
+    hf.close()
+
+    x_trans_te = testrun(T, x_trans_test, profile)
     yy_trans_te = create_label(te, config.TRANSFERSET_LABEL)
 
     sys_out(f'start transfer test {snr_range} snr , transform is {T}')
@@ -199,18 +190,26 @@ def train_test(T, profile, snr_range="high"):
 ###############################################################
 ############################# main function
 ###############################################################
-#for tt in trans_list:
-    #sys_out("start {} graph train and test".format(tt))
-    #train_test(tt, False)
-    #train_test(tt, False, "med")
-    #train_test(tt, False, "low")
+def main():
+    os.makedirs(f"../{save_dir}", exist_ok=True)
+
+    with open(f"../{save_dir}/logbook_second_trans.txt", 'a') as out:
+        out.write("Start \n")   
+    
+    #for tt in trans_list:
+        #sys_out("start {} graph train and test".format(tt))
+        #train_test(tt, False)
+        #train_test(tt, False, "med")
+        #train_test(tt, False, "low")
 
 
-for tt in trans_list:
-    sys_out("start {} profile train and test".format(tt))
-    train_test(tt, True)
-    train_test(tt, True, "med")
-    train_test(tt, True, "low")
+    for tt in trans_list:
+        sys_out("start {} profile train and test".format(tt))
+        train_test(tt, True)
+        train_test(tt, True, "med")
+        train_test(tt, True, "low")
 
-sys_out('DONE')
+    sys_out('DONE')
 
+if __name__ == '__main__':
+    main()
