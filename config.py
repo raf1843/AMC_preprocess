@@ -15,9 +15,9 @@
 #TRANSFERSET_LABEL = [4]
 #TEST_SIZE = 10000
 
-TRANSFERSET_NAME = "RADML"
-TRANSFERSET_PATH = "../../data/GOLD_XYZ_OSC.0001_1024.hdf5"
-TEST_SIZE = 2555904
+#TRANSFERSET_NAME = "RADML"
+#TRANSFERSET_PATH = "../../data/GOLD_XYZ_OSC.0001_1024.hdf5"
+#TEST_SIZE = 2555904
 
 ''' Number of samples to work with '''
 # when running train_test, needs to be 30 to match RadioML

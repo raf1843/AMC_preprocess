@@ -19,6 +19,9 @@ hf_out = h5py.File(config.TRANSFERSET_FEATURESET_PATH, 'w')
 
 test_out = hf_out.create_dataset('X', shape=config.SHAPE, dtype=np.complex64, chunks=True)
 label_out = hf_out.create_dataset('Y', shape=(config.SHAPE[0], 24), dtype=np.int64, chunks=True)
+# RadioML only
+#z = hf['Z']
+#snr_out = hf_out.create_dataset('Z', shape=(config.SHAPE[0], 1), dtype=np.int64, chunks=True)
 
 for start in range(0, full_size, config.TEST_SIZE):
     end = min(start + config.TEST_SIZE, full_size)
@@ -28,6 +31,7 @@ for start in range(0, full_size, config.TEST_SIZE):
    
     batch = x[start:end]
     batch_labels = y[start:end]
+    #batch_snr = z[start:end]
 
     # Get signal from IQ
     s = batch[:,:,0] + 1j*batch[:,:,1]
@@ -45,6 +49,7 @@ for start in range(0, full_size, config.TEST_SIZE):
 
     test_out[start:end] = np.asarray(test, dtype=np.complex64)
     label_out[start:end] = batch_labels
+    snr_out[start:end] = batch_snr
 
 hf.close()
 hf_out.close()
